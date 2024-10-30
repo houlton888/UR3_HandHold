@@ -37,7 +37,7 @@ while time.time()-t_start < run_time:
     deriv_error = np.divide(np.subtract(error, error_arr[loop_num-1]),frequency)
 
     accel = error*Kp + int_error*Ki + deriv_error*Kd
-    vel = vel + accel*frequency
+    vel = vel + accel*frequency #Make sure this does matrix by scalar multiplication
     speed = math.sqrt(sum(pow(num, 2) for num in vel))
     y =  vel[0] #direction ratio of x direction--|
     z = -vel[1] #direction ratio of y direction  |-> Converts cord-system of the force sensor to the global cord-system of the arm
@@ -48,7 +48,7 @@ while time.time()-t_start < run_time:
         print("speed to high, limiting to max")
         speed = max_speed_arm
     
-    # If speed is small ignore (adds deadband) (accel <.5 newtons)
+    # If force is small ignore (adds deadband) (accel <.5 newtons)
     if math.sqrt(sum(pow(num, 2) for num in accel)) > .01:
         r.move([x,y,z], speed)
 
