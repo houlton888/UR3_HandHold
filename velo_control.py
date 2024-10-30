@@ -105,7 +105,7 @@ class Arm_Velocity(Node):
         if q_guess is None:  # Use current robot pose as q_guess
             q_guess = self.read_joints_pos()
 
-        
+        self.ik_solver = URKinematics("ur3e") # ADDED THIS LINE TO TRY TO DELETE CACHE
       
         # If coordinates in euler format convert to quaternions
         if len(cords) == 6:
