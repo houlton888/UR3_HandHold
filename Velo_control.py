@@ -172,7 +172,9 @@ class Arm_Velocity(Node):
         Move in the Direction given at the speed given
         """
         # scale Direction to 5 cm in length:
-        scaled_dir = self.normalize(direction, .05)                          # FLAG THIS LINE TO LOOK MORE INTO BEST DISTANCE AHEAD
+        frequency = pub_freq
+        distance = speed * frequency
+        scaled_dir = self.normalize(direction, distance)         # FLAG THIS LINE TO LOOK MORE INTO BEST DISTANCE AHEAD
         
         curr_pos = self.read_global_pos()
         next_pos = curr_pos
@@ -192,8 +194,8 @@ class Arm_Velocity(Node):
                 print("angle changes: " + str(angle_changes))
                 self.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
                 raise ValueError("could not solve IK with small angles: changes - " + str(angle_changes))
-        velo = self.normalize(angle_changes, speed)
-        self.set_vel(velo)
+        #velo = self.normalize(angle_changes, speed) #this is already done by scaled dir
+        self.set_vel(angle_changes)
 
     def move_to_angles(self, point, max_speed = .05, degrees = False):
         """
