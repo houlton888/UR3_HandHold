@@ -1,0 +1,6 @@
+[INFO] [1730386709.879564899] [remote_control_client_velo]: Sent joint velocities: array('d', [0.032257949590480804, -0.003926264655369361, 0.05, -0.046109612042637, -0.03238007813631557, -1.4951237087593688e-05])
+[INFO] [1730386709.943238197] [remote_control_client_velo]: Sent joint velocities: array('d', [0.032257949590480804, -0.003926264655369361, 0.05, -0.046109612042637, -0.03238007813631557, -1.4951237087593688e-05])
+[INFO] [1730386710.103774642] [remote_control_client_velo]: Sent joint velocities: array('d', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+[INFO] [1730386710.104736285] [remote_control_client_velo]: Sent joint velocities: array('d', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+[INFO] [1730386710.413354847] [remote_control_client_velo]: Sent joint velocities: array('d', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+[INFO] [1730386710.414278322] [remote_control_client_velo]: Sent joint velocities: array('d', [0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
