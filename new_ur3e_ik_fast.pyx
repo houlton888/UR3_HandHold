@@ -34,11 +34,6 @@ cdef class PyKinematics:
         return self.thisptr.num_of_joints
     def forward(self,vector[float] joint_config):
         return self.thisptr.forward(joint_config)
-    def inverse(self,vector[float] ee_pose):
-        del self.thisptr
-        self.thisptr = new Kinematics() # try reinitialize to get rid of any cache?
-        print("thisptr.inverse: " + str(self.thisptr.inverse(ee_pose)))
-        printf("%f\s", "thisptr.inverse: ")
-        printf("%f\s", str(self.thisptr.inverse(ee_pose)))
-        cdef vector[float] ee_pose_copy = ee_pose # try not reference the pointer to get rid of any cache?
+    def inverse(self,vector[float] ee_pose)
+
         return self.thisptr.inverse(ee_pose)
