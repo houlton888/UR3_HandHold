@@ -4,8 +4,10 @@ import time
 
 frequency = .01
 r = Arm_Velocity(pub_freq = frequency)
+r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .05, degrees = True) # starting position
+time.sleep(.5)
 
-#Code here to control arm
+#Code here to control arm - limit velocity to less than .15 m/s. Have motions remain within ~.15 meters of start
 
 
 
@@ -21,6 +23,6 @@ joint_velos = r.solve_ik_velo([x_vel,y_vel,z_vel]).tolist() #returns joint veloc
 r.set_vel(joint_velos)
 r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .05, degrees = True) # starting position
 r.move_global(xyz_pos) #rx ry rz stays the same?
-t_sleep = r.start_xyz_rel([x_distance,y_distance,z_distance])  #moves relative distances given after time t_sleep 
+t_sleep = r.start_xyz_rel([x_distance,y_distance,z_distance], speed=.05)  #moves relative distances given after time t_sleep at speed .05
 SET VELOCITY TO 0 AFTER TIME T_SLEEP HAS PASSED!
 """
