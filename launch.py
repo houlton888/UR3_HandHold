@@ -8,7 +8,7 @@ def main():
     # Set up argument parsing
     parser = argparse.ArgumentParser(description="Launch UR control")
     parser.add_argument('--ur_type', type=str, default='ur3e', help='Type of UR robot')
-    parser.add_argument('--robot_ip', type=str, default="130.64.17.5", help='IP address of the robot')
+    parser.add_argument('--robot_ip', type=str, default="130.64.17.95", help='IP address of the robot')
     parser.add_argument('--launch_rviz', type=bool, default=False, help='Launch RViz')
     parser.add_argument('--controller', type=str, default='forward_velocity_controller', help='Initial Controller')
     
