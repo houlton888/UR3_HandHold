@@ -3,12 +3,13 @@ import numpy as np
 import time
 import pandas as pd
 import datetime
+import math
 from openpyxl import load_workbook
 
-trial_number = 3
-Name = "person2"
-date = "11-24-2024"
-dominant_hand = "R"
+trial_number = 1
+Name = "Eli_Houlton"
+date = "12-17-2024"
+dominant_hand = "R,sitting"
 
 frequency = .01
 r = Arm_Velocity(pub_freq = frequency)
@@ -94,9 +95,9 @@ data = pd.concat([data, info], axis=1)
 
 freq = frequency*5
 dp = 0
-frc = np.zeros((int(circle_time/freq + 1), 3)) # [row][column]
-pos = np.zeros((int(circle_time/freq + 1), 3)) # [row][column]
-time_arr = np.zeros(int(circle_time/freq + 1))
+frc = np.zeros((int(circle_time/freq + 5), 3)) # [row][column]
+pos = np.zeros((int(circle_time/freq + 5), 3)) # [row][column]
+time_arr = np.zeros(int(circle_time/freq + 5))
 for i in [[0, radius, 0],[0, -radius/2, radius], [0, -radius/2, -radius]]:
     t_sleep = r.start_xyz_rel(i)
     t_begin = time.time()
@@ -238,7 +239,7 @@ freq = frequency*5
 print(freq)
 dp = 0
 step = .01*freq
-points = radius*2/step
+points = int(radius*2/step+1)
 
 frc = np.zeros((points, 3)) # [row][column]
 pos = np.zeros((points, 3)) # [row][column]
@@ -251,6 +252,65 @@ for i in range(int(radius*2/step)):
     t_step = r.start_xyz_rel([0,-step,(step*2)*np.cos(.05*i)],speed=.1)
     dp = dp+1
     time.sleep(t_step)
+r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+movement = pd.DataFrame({'Time'+str(movement_number): time_arr, 
+        'posx'+str(movement_number):pos[:,0], 'posy'+str(movement_number):pos[:,1], 'posz'+str(movement_number):pos[:,2],
+        'fx'  +str(movement_number):frc[:,0], 'fy'  +str(movement_number):frc[:,1], 'fz'  +str(movement_number):frc[:,2]
+})
+data = pd.concat([data, movement], axis=1) 
+
+time.sleep(.25)
+#-----------------------------------------------------------
+movement_number = 8 # sin wave right to left
+info = pd.DataFrame({'Movement'+str(movement_number):['Sin right to left length: '+str(radius)]})
+data = pd.concat([data, info], axis=1)
+
+r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+freq = frequency*5
+print(freq)
+dp = 0
+step = .01*freq
+points = int(radius*2/step+1)
+
+frc = np.zeros((points, 3)) # [row][column]
+pos = np.zeros((points, 3)) # [row][column]
+time_arr = np.zeros(points)
+
+for i in range(int(radius*2/step)):
+    frc[dp] = np.subtract(r.get_force(), start_force)
+    pos[dp] = r.read_global_pos()[0:3]
+    time_arr[dp] = time.time()-t_start
+    t_step = r.start_xyz_rel([0,step,(step*2)*np.cos(.05*i)],speed=.1)
+    dp = dp+1
+    time.sleep(t_step)
+r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+movement = pd.DataFrame({'Time'+str(movement_number): time_arr, 
+        'posx'+str(movement_number):pos[:,0], 'posy'+str(movement_number):pos[:,1], 'posz'+str(movement_number):pos[:,2],
+        'fx'  +str(movement_number):frc[:,0], 'fy'  +str(movement_number):frc[:,1], 'fz'  +str(movement_number):frc[:,2]
+})
+data = pd.concat([data, movement], axis=1) 
+time.sleep(.25)
+
+#-----------------------------------------------------------
+movement_number = 9 # measure while still to get noise/human natural movement:
+
+r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .1, degrees = True)
+dp = 0
+time_to_measure = 4 # in seconds
+info = pd.DataFrame({'Movement'+str(movement_number):['sitting still at start for time: '+str(time_to_measure)]})
+data = pd.concat([data, info], axis=1)
+
+frc = np.zeros((int(time_to_measure/frequency+1), 3)) # [row][column]
+pos = np.zeros((int(time_to_measure/frequency+1), 3)) # [row][column]
+time_arr = np.zeros(int(time_to_measure/frequency+1))
+for i in range(int(time_to_measure/frequency)):
+    frc[dp] = np.subtract(r.get_force(), start_force)
+    pos[dp] = r.read_global_pos()[0:3]
+    time_arr[dp] = time.time()-t_start
+    dp = dp + 1
+    time.sleep(frequency)
 
 movement = pd.DataFrame({'Time'+str(movement_number): time_arr, 
         'posx'+str(movement_number):pos[:,0], 'posy'+str(movement_number):pos[:,1], 'posz'+str(movement_number):pos[:,2],
@@ -258,14 +318,152 @@ movement = pd.DataFrame({'Time'+str(movement_number): time_arr,
 })
 data = pd.concat([data, movement], axis=1) 
 time.sleep(.1)
+
+#-----------------------------------------------------------
+movement_number = 10 # left and right about middle, only traveling .03 meters from start 5 times
+info = pd.DataFrame({'Movement'+str(movement_number):['left right wiggle about middle 5 times']})
+data = pd.concat([data, info], axis=1)
+r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .1, degrees = True)
+
+radius = .03
+y_0 = r.read_global_pos()[1]
+t_sleep = r.start_xyz_rel([0,radius,0])
+time.sleep(t_sleep)
+dp = 0
+vel = 0
+accel = .15
+freq = frequency
+points = 615
+frc = np.zeros((points, 3)) # [row][column]
+pos = np.zeros((points, 3)) # [row][column]
+time_arr = np.zeros(points)
+
+while r.read_global_pos()[1] > y_0:
+    frc[dp] = np.subtract(r.get_force(), start_force)
+    pos[dp] = r.read_global_pos()[0:3]
+    time_arr[dp] = time.time()-t_start
+    vel = vel + accel*freq
+    joint_velos = r.solve_ik_velo([0,-vel,0]).tolist()
+    r.set_vel(joint_velos)
+    time.sleep(freq)
+    dp = dp + 1
+steps = dp
+
+for i in range(steps):
+    frc[dp] = np.subtract(r.get_force(), start_force)
+    pos[dp] = r.read_global_pos()[0:3]
+    time_arr[dp] = time.time()-t_start
+    vel = vel - accel*freq
+    joint_velos = r.solve_ik_velo([0,-vel,0]).tolist()
+    r.set_vel(joint_velos)
+    time.sleep(freq)
+    dp = dp + 1
+    
+for i in range(4):
+    for j in range(steps):
+        frc[dp] = np.subtract(r.get_force(), start_force)
+        pos[dp] = r.read_global_pos()[0:3]
+        time_arr[dp] = time.time()-t_start
+        vel = vel + accel*freq
+        joint_velos = r.solve_ik_velo([0,math.pow(-1, i)*vel,0]).tolist()
+        r.set_vel(joint_velos)
+        time.sleep(freq)
+        dp = dp + 1
+
+    for j in range(steps):
+        frc[dp] = np.subtract(r.get_force(), start_force)
+        pos[dp] = r.read_global_pos()[0:3]
+        time_arr[dp] = time.time()-t_start
+        vel = vel - accel*freq
+        joint_velos = r.solve_ik_velo([0,math.pow(-1, i)*vel,0]).tolist()
+        r.set_vel(joint_velos)
+        time.sleep(freq)
+        dp = dp + 1
+movement = pd.DataFrame({'Time'+str(movement_number): time_arr, 
+        'posx'+str(movement_number):pos[:,0], 'posy'+str(movement_number):pos[:,1], 'posz'+str(movement_number):pos[:,2],
+        'fx'  +str(movement_number):frc[:,0], 'fy'  +str(movement_number):frc[:,1], 'fz'  +str(movement_number):frc[:,2]
+})
+data = pd.concat([data, movement], axis=1) 
+time.sleep(.1)
+#-----------------------------------------------------------
+movement_number = 11 # up and down about middle, only traveling .03 meters from start 5 times:
+info = pd.DataFrame({'Movement'+str(movement_number):['up down wiggle about middle 5 times']})
+data = pd.concat([data, info], axis=1)
+r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .1, degrees = True)
+
+points = 615
+frc = np.zeros((points, 3)) # [row][column]
+pos = np.zeros((points, 3)) # [row][column]
+time_arr = np.zeros(points)
+
+z_0 = r.read_global_pos()[2]
+t_sleep = r.start_xyz_rel([0,0,radius])
+time.sleep(t_sleep)
+dp = 0
+vel = 0
+accel = .15
+freq = frequency
+
+while r.read_global_pos()[2] > z_0:
+    frc[dp] = np.subtract(r.get_force(), start_force)
+    pos[dp] = r.read_global_pos()[0:3]
+    time_arr[dp] = time.time()-t_start
+    vel = vel + accel*freq
+    joint_velos = r.solve_ik_velo([0,0,-vel]).tolist()
+    r.set_vel(joint_velos)
+    time.sleep(freq)
+    dp = dp + 1
+steps = dp
+for i in range(steps):
+    frc[dp] = np.subtract(r.get_force(), start_force)
+    pos[dp] = r.read_global_pos()[0:3]
+    time_arr[dp+dp2] = time.time()-t_start
+    vel = vel - accel*freq
+    joint_velos = r.solve_ik_velo([0,0,-vel]).tolist()
+    r.set_vel(joint_velos)
+    time.sleep(freq)
+    dp = dp + 1
+    
+for i in range(4):
+    for j in range(steps):
+        frc[dp] = np.subtract(r.get_force(), start_force)
+        pos[dp] = r.read_global_pos()[0:3]
+        time_arr[dp] = time.time()-t_start
+        vel = vel + accel*freq
+        joint_velos = r.solve_ik_velo([0,0,math.pow(-1, i)*vel]).tolist()
+        r.set_vel(joint_velos)
+        time.sleep(freq)
+        dp = dp + 1
+
+    for j in range(steps):
+        frc[dp] = np.subtract(r.get_force(), start_force)
+        pos[dp] = r.read_global_pos()[0:3]
+        time_arr[dp] = time.time()-t_start
+        vel = vel - accel*freq
+        joint_velos = r.solve_ik_velo([0,0,math.pow(-1, i)*vel]).tolist()
+        r.set_vel(joint_velos)
+        time.sleep(freq)
+        dp = dp + 1
+print(dp)
+r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+movement = pd.DataFrame({'Time'+str(movement_number): time_arr, 
+        'posx'+str(movement_number):pos[:,0], 'posy'+str(movement_number):pos[:,1], 'posz'+str(movement_number):pos[:,2],
+        'fx'  +str(movement_number):frc[:,0], 'fy'  +str(movement_number):frc[:,1], 'fz'  +str(movement_number):frc[:,2]
+})
+data = pd.concat([data, movement], axis=1) 
+time.sleep(.1)
+
 #-----------------------------------------------------------
 df = pd.DataFrame.from_dict(data)
 # for first time to reset sheet only:
-df.to_excel('output.xlsx', index=False, sheet_name=('trial'+str(trial_number)+str(Name)))
+#df.to_excel(str(Name)'.xlsx', index=False, sheet_name=('trial'+str(trial_number)+str(Name)))
 
 #Every subsequent test:
-#with pd.ExcelWriter('output.xlsx', engine='openpyxl', mode='a', if_sheet_exists='new') as writer:
-#    df.to_excel(writer, sheet_name=('trial'+str(trial_number)+str(Name)), index=False)
+try:
+    with pd.ExcelWriter(str(Name)+'.xlsx', engine='openpyxl', mode='a', if_sheet_exists='new') as writer:
+       df.to_excel(writer, sheet_name=('trial'+str(trial_number)+str(Name)), index=False)
+except:
+    df.to_excel(str(Name)+'.xlsx', index=False, sheet_name=('trial'+str(trial_number)+str(Name)))
 
 r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 r.destroy_node()

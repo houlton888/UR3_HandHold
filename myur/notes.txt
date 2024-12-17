@@ -1,0 +1,4 @@
+to git commit:
+git add (only what files you want to update so installs dont get added)
+git commit -m "message here"
+git push -u origin -f
