@@ -3,10 +3,12 @@ from scipy.spatial.transform import Rotation as R
 from rclpy.node import Node
 import math
 import time
+import random
 # ROS2 Msg Types:
 from sensor_msgs.msg import JointState
 from geometry_msgs.msg import WrenchStamped
 from std_msgs.msg import Float64MultiArray
+from std_msgs.msg import Int32MultiArray
 # Internal Libraries:
 from myur.ik_solver.ur_kinematics import URKinematics
 #New Inverse solver libraries:
@@ -60,6 +62,7 @@ class Arm_Velocity(Node):
         self.ik_arm = rtb.models.UR3()
         self.joint_states = JointStates()
         self.tool_wrench = ToolWrench()
+        self.gripper = Gripper()
         
     def __del__(self):
         # De-init rclpy
@@ -324,6 +327,83 @@ class Arm_Velocity(Node):
             vector_new[i] = (vector[i]/mag)*length
         return vector_new
 
+    def generate_acceleration_tuples(self):
+        num_tuples = 200
+        time_step = 0.05  # Time step in seconds
+        max_distance = .2  # Maximum allowed distance in meters
+    
+        positions = [0.0, 0.0, 0.0]  # Starting position for x, y, z
+        velocities = [0.0, 0.0, 0.0]  # Initial velocity for x, y, z
+        accelerations = np.zeros((num_tuples, 3))
+    
+        for i in range(num_tuples):
+                # Generate random accelerations between -1 and 1 m/s²
+                ax = random.uniform(-1, 1)
+                ay = random.uniform(-1, 1)
+                az = random.uniform(-1, 1)
+    
+                # Calculate new velocities
+                vx_new = velocities[0] + ax * time_step
+                vy_new = velocities[1] + ay * time_step
+                vz_new = velocities[2] + az * time_step
+    
+                # Calculate new positions
+                px_new = positions[0] + vx_new * time_step
+                py_new = positions[1] + vy_new * time_step
+                pz_new = positions[2] + vz_new * time_step
+    
+                # Check if the new position is within bounds
+                if px_new > max_distance:
+                    ax = -abs(ax)
+                if px_new < -max_distance:
+                    ax = abs(ax)
+                    
+                if py_new > max_distance:
+                    ay = -abs(ay)
+                if py_new < -max_distance:
+                    ay = abs(ay)
+    
+                if pz_new > max_distance:
+                    az = -abs(az)
+                if pz_new < -max_distance:
+                    az = abs(az)
+                    
+                # Calculate new velocities
+                vx_new = velocities[0] + ax * time_step
+                vy_new = velocities[1] + ay * time_step
+                vz_new = velocities[2] + az * time_step
+    
+                # Calculate new positions
+                px_new = positions[0] + vx_new * time_step
+                py_new = positions[1] + vy_new * time_step
+                pz_new = positions[2] + vz_new * time_step
+    
+                # update the position and velocities
+                positions = [px_new, py_new, pz_new]
+                velocities = [vx_new, vy_new, vz_new]
+        
+                # Add the valid acceleration to the list
+                inst = [ax,ay,az]
+                accelerations[i] = inst
+                
+        return accelerations
+        
+    def move_gripper(self, position, speed=50, force=50, wait=True):
+        """
+        Move the gripper to the specified position with given speed and force.
+
+        Args:
+            position (int): Position for the gripper.
+            speed (int): Speed for the gripper.
+            force (int): Force for the gripper.
+        """
+        self.gripper.control(
+            int(255 * position / 100),
+            int(255 * speed / 100),
+            int(255 * force / 100),
+            wait,
+        )
+
 
 class JointStates(rclpy.node.Node):
     """
@@ -446,3 +526,87 @@ class ToolWrench(rclpy.node.Node):
         while not client.done:
             rclpy.spin_once(client)
             self.get_logger().debug(f"Waiting for wrench client")
+
+
+class Gripper(rclpy.node.Node):
+    """
+    Subscribe and publish to Gripper topics.
+    """
+
+    def __init__(self):
+        """
+        Initialize the Gripper node.
+        """
+        super().__init__("gripper_client")
+        self.subscription = self.create_subscription(
+            Int32MultiArray,
+            "/gripper/state",
+            self.listener_callback,
+            10,
+        )
+
+        self.publisher_ = self.create_publisher(Int32MultiArray, "/gripper/control", 10)
+
+        self.states = None
+        self.done = False
+        self.active = False
+
+    def listener_callback(self, msg):
+        """
+        Callback for when gripper state data is received.
+
+        Args:
+            msg (Int32MultiArray): The gripper state message.
+        """
+        self.states = msg.data
+        self.done = True
+
+    def get(self):
+        """
+        Get the current state of the gripper.
+
+        Returns:
+            list: The current state of the gripper.
+        """
+        self.wait(self)
+        self.done = False
+        return list(self.states[0:3])
+
+    def control(self, POS, SPE, FOR, BLOCK):
+        """
+        Control the gripper with the given position, speed, and force.
+
+        Args:
+            POS (int): Position for the gripper.
+            SPE (int): Speed for the gripper.
+            FOR (int): Force for the gripper.
+        """
+        msg = Int32MultiArray()
+        msg.data = [POS, SPE, FOR]
+        self.publisher_.publish(msg)
+
+        if BLOCK:
+            # wait until the gripper acknowledges that it will try to go to the requested position
+            time.sleep(0.05)
+            self.get()
+            while self.states[4] != self.states[3]:
+                self.get()
+                time.sleep(0.05)
+
+            # wait until not moving
+            self.get()
+            while self.states[5] == 0:
+                self.get()
+                time.sleep(0.05)
+
+    def wait(self, client):  # class gripper
+        """
+        Wait for the gripper state to be updated.
+
+        Args:
+            client (Node): The node to wait for.
+        """
+        rclpy.spin_once(client)
+        while not client.done:
+            rclpy.spin_once(client)
+            self.get_logger().debug(f"Waiting for gripper client")
