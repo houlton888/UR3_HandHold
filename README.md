@@ -8,3 +8,13 @@ Notes:
     $ cd myur
     $ python3 Gripper_Node.py --ip "130.64.17.95"
 - human_response.py is what I used to collect data for my study
+- velo_control creates the class for the robot arm and has the following useful functions (more about them can be found below function def in file):
+r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+r.get_force()
+r.read_global_pos()
+r.read_joints_pos()
+r.solve_ik(global_pos)  THIS GIVES np.floats
+r.solve_fk(angles)
+r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .05, degrees = True)
+r.move_global(xyz_pos) #rx ry rz stays the same? #DOESNT WORK WELL
+t_sleep = r.start_xyz_rel([x,y,z]) (in_out,left_right,up_down)
