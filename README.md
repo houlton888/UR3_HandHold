@@ -5,6 +5,6 @@
 
 Notes:
 - To launch gripper and open then close it (so it can grab something) run the following in new terminal:
-    cd myur
-    python3 Gripper_Node.py --ip "130.64.17.95"
+    $ cd myur
+    $ python3 Gripper_Node.py --ip "130.64.17.95"
 - human_response.py is what I used to collect data for my study
