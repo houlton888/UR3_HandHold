@@ -7,9 +7,9 @@ import math
 from openpyxl import load_workbook
 
 trial_number = 1
-Name = "Eli_Houlton"
-date = "12-17-2024"
-dominant_hand = "R,sitting"
+Name = "BlindF_houlton"
+date = "2-10-2025"
+dominant_hand = "NA"
 
 frequency = .01
 r = Arm_Velocity(pub_freq = frequency)
@@ -130,9 +130,9 @@ freq = frequency*2
 info = pd.DataFrame({'Movement'+str(movement_number):['Constant accel then decel left to right '+str(radius)]})
 data = pd.concat([data, info], axis=1)
 
-frc = np.zeros((218, 3)) # [row][column]
-pos = np.zeros((218, 3)) # [row][column]
-time_arr = np.zeros(218)
+frc = np.zeros((260, 3)) # [row][column]
+pos = np.zeros((260, 3)) # [row][column]
+time_arr = np.zeros(260)
 
 while r.read_global_pos()[1] > y_0:
     frc[dp] = np.subtract(r.get_force(), start_force)
@@ -333,7 +333,7 @@ dp = 0
 vel = 0
 accel = .15
 freq = frequency
-points = 615
+points = 1000
 frc = np.zeros((points, 3)) # [row][column]
 pos = np.zeros((points, 3)) # [row][column]
 time_arr = np.zeros(points)
@@ -348,6 +348,7 @@ while r.read_global_pos()[1] > y_0:
     time.sleep(freq)
     dp = dp + 1
 steps = dp
+print("STEPS: "+str(steps))
 
 for i in range(steps):
     frc[dp] = np.subtract(r.get_force(), start_force)
@@ -391,7 +392,7 @@ info = pd.DataFrame({'Movement'+str(movement_number):['up down wiggle about midd
 data = pd.concat([data, info], axis=1)
 r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .1, degrees = True)
 
-points = 615
+points = 1000
 frc = np.zeros((points, 3)) # [row][column]
 pos = np.zeros((points, 3)) # [row][column]
 time_arr = np.zeros(points)
@@ -454,11 +455,50 @@ data = pd.concat([data, movement], axis=1)
 time.sleep(.1)
 
 #-----------------------------------------------------------
+movement_number = 12 # random 10 sec motion
+info = pd.DataFrame({'Movement'+str(movement_number):['random accels for 10 sec']})
+data = pd.concat([data, info], axis=1)
+r.move_to_angles([30, -180, 90, -90, 60, 0], max_speed = .1, degrees = True)
+time.sleep(.25)
+
+points = 200
+frc = np.zeros((points, 3)) # [row][column]
+pos = np.zeros((points, 3)) # [row][column]
+time_arr = np.zeros(points)
+frequency = .05
+
+accels = r.gen_rand_acceleration_tuples(time_step = frequency)
+vel = np.zeros(3)
+dp = 0
+
+for i in range(points): 
+    start = time.perf_counter()
+    # record total time of script, pos as tuple, and force as tuple into array
+    frc[dp] = np.subtract(r.get_force(), start_force)
+    pos[dp] = r.read_global_pos()[0:3]
+    time_arr[dp] = time.time()-t_start
+    dp = dp+1
+    vel = np.add(vel,accels[i]*.05)
+    velocity = r.solve_ik_velo(vel).tolist()
+    r.set_vel(velocity)
+    while time.perf_counter() - start < frequency:  # Wait for .05 second
+        pass
+
+r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+movement = pd.DataFrame({'Time'+str(movement_number): time_arr, 
+        'posx'+str(movement_number):pos[:,0], 'posy'+str(movement_number):pos[:,1], 'posz'+str(movement_number):pos[:,2],
+        'fx'  +str(movement_number):frc[:,0], 'fy'  +str(movement_number):frc[:,1], 'fz'  +str(movement_number):frc[:,2],
+        'accx' :accels[:,0], 'accy':accels[:,1], 'accz':accels[:,2]
+})
+data = pd.concat([data, movement], axis=1) 
+time.sleep(.1)
+
+#-----------------------------------------------------------
 df = pd.DataFrame.from_dict(data)
 # for first time to reset sheet only:
 #df.to_excel(str(Name)'.xlsx', index=False, sheet_name=('trial'+str(trial_number)+str(Name)))
 
-#Every subsequent test:
+#Every subsequent test adds to next sheet in if name mathces with name already present:
 try:
     with pd.ExcelWriter(str(Name)+'.xlsx', engine='openpyxl', mode='a', if_sheet_exists='new') as writer:
        df.to_excel(writer, sheet_name=('trial'+str(trial_number)+str(Name)), index=False)
@@ -467,6 +507,7 @@ except:
 
 r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 r.destroy_node()
+print("Run Time:  " + str(time.time() - t_start))
 
 """ Functions:
 r.set_vel([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])

@@ -54,7 +54,7 @@ class Arm_Velocity(Node):
         self.velocity_command = Float64MultiArray()
         self.velocity_command.data = ([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         
-        # Timer to continuously publish the current velocity command at 10 Hz
+        # Timer to continuously publish the current velocity command every pub_freq sec
         self.timer = self.create_timer(self.frequency, self.publish_velocity_command)
         
         # Public Attributes
@@ -75,14 +75,14 @@ class Arm_Velocity(Node):
         :param velocities: List of floats representing joint velocities.
         """
         self.velocity_command.data = velocities
-        self.publish_velocity_command()
+        #self.publish_velocity_command() #This happends auto on a timer, this func just updates what will be published
         rclpy.spin_once(self)
         
     def publish_velocity_command(self):
         """Publish the current velocity command."""
         # Publish the velocity command
         self.publisher.publish(self.velocity_command)
-        self.get_logger().info(f"Sent joint velocities: {self.velocity_command.data}")
+        #self.get_logger().info(f"Sent joint velocities: {self.velocity_command.data}")
         
     def read_joints_pos(self):
         """
@@ -143,10 +143,7 @@ class Arm_Velocity(Node):
         input: xyz_vel -> velocity wanted in xyz cords:
         returns: joint velocities
         """
-        #print(self.ik_arm.ee_links[0])
-        #print(xyz_vel)
         velo = np.append(xyz_vel,[0.0, 0.0, 0.0])
-        #print("line 145 vel: " +str(velo))
         # The base-frame manipulator Jacobian in the qr configuration
         current_position = self.read_joints_pos() # in radians  =r.read_joints_pos()
         J = self.ik_arm.jacob0(current_position)
@@ -327,10 +324,8 @@ class Arm_Velocity(Node):
             vector_new[i] = (vector[i]/mag)*length
         return vector_new
 
-    def generate_acceleration_tuples(self):
+    def gen_rand_acceleration_tuples(self, max_distance = .2, acc_mult = .18, time_step = .05):
         num_tuples = 200
-        time_step = 0.05  # Time step in seconds
-        max_distance = .2  # Maximum allowed distance in meters
     
         positions = [0.0, 0.0, 0.0]  # Starting position for x, y, z
         velocities = [0.0, 0.0, 0.0]  # Initial velocity for x, y, z
@@ -384,7 +379,8 @@ class Arm_Velocity(Node):
         
                 # Add the valid acceleration to the list
                 inst = [ax,ay,az]
-                accelerations[i] = inst
+                result = [acc * acc_mult for acc in inst]
+                accelerations[i] = result
                 
         return accelerations
         
@@ -416,7 +412,7 @@ class JointStates(rclpy.node.Node):
         """
         super().__init__("joint_state_subscriber")
         self.subscription = self.create_subscription(
-            JointState, "joint_states", self.listener_callback, 10
+            JointState, "joint_states", self.listener_callback, 100
         )
         self.ik_solver = URKinematics("ur3e")
         self.states = None
@@ -446,7 +442,8 @@ class JointStates(rclpy.node.Node):
         Returns:
             dict: The current joint states.
         """
-        self.wait(self)
+        #self.wait(self)
+        rclpy.spin_once(self)
         self.done = False
         return self.states
         
